@@ -168,7 +168,6 @@
     .expense-day-heading { display: flex; justify-content: space-between; gap: 10px; padding: 14px 0 2px; color: var(--muted); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .45px; }
     .expense-day-total { color: var(--ink); font-size: 10px; }
     .expense-empty-action { display: inline-flex; margin-top: 12px; }
-    .settings-intro { margin: -4px 0 18px; color: var(--muted); font-size: 12px; }
     .settings-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; align-items: start; }
     .settings-group { min-width: 0; padding: 17px; }
     .settings-group-heading { display: flex; align-items: center; gap: 10px; margin: 0 0 15px; }
@@ -250,7 +249,6 @@
       .expense-spend-card, .expense-budget-card { padding: 14px; }
       .expense-filter-card { padding: 11px; }
       .expense-list-card { padding: 12px; }
-      .settings-intro { font-size: 11px; }
       .settings-sections { grid-template-columns: 1fr; gap: 9px; }
       .settings-group { padding: 15px; }
       .settings-group-heading { margin-bottom: 11px; }
@@ -411,7 +409,7 @@
         <div id="plannerList"></div>
       </section>
       <section class="page" id="page-settings">
-        <div class="welcome-row"><div><h1>Settings</h1><p>Personalize your app, set your spending limit, and manage your data.</p></div></div>
+        <div class="welcome-row"><div><h1>Settings</h1></div></div>
         <div class="settings-sections">
           <section class="card settings-group">
             <div class="settings-group-heading"><span class="settings-group-icon">◉</span><div><h2>Profile &amp; appearance</h2><p>Make Clumsy yours</p></div></div>
@@ -606,6 +604,7 @@
           const months=new Set([monthNow(),...state.transactions.map(tx=>tx.date?.slice(0,7)).filter(Boolean)]);
           select.innerHTML=`<option value="all">All months</option>`+[...months].sort().reverse().map(month=>`<option value="${esc(month)}">${new Date(`${month}-02T12:00:00`).toLocaleDateString("en-PK",{month:"short",year:"numeric"})}</option>`).join("");
           if(previous && (previous==="all"||months.has(previous))) select.value=previous;
+          else select.value=monthNow();
         }
       }
       function renderExpenseSummary() {
