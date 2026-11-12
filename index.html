@@ -277,7 +277,7 @@
         <h2>Choose where your data lives</h2>
         <p>Pick a storage option or restore a backup. Nothing is created until you choose.</p>
         <div class="storage-options" role="group" aria-label="Choose storage">
-          <button type="button" class="storage-option" data-setup-choice="drive">
+          <button type="button" class="storage-option" id="driveSetupChoice" data-setup-choice="drive">
             <span class="storage-icon">D</span><span><strong>Google Drive</strong><small>Save a private Clumsy backup in your Drive. Requires your Google OAuth client ID and permission.</small></span>
           </button>
           <button type="button" class="storage-option" data-setup-choice="local">
@@ -435,7 +435,7 @@
             <div class="setting-row"><div class="setting-row-copy"><strong id="settingsAccountCount"></strong><small>Balances you entered</small></div><button type="button" class="secondary setting-control" id="settingsAddAccount">＋ Add</button></div>
           </section>
           <section class="card settings-group">
-            <div class="settings-group-heading"><span class="settings-group-icon">☁</span><div><h2>Data &amp; sync</h2><p>Choose where your data lives</p></div></div>
+            <div class="settings-group-heading"><span class="settings-group-icon">☁</span><div><h2>Data &amp; sync</h2><p id="dataSyncDescription">Choose where your data lives</p></div></div>
             <div id="storageStatus"></div>
             <div class="settings-actions"><button type="button" class="secondary" id="connectDriveSettings">Connect Google Drive</button><button type="button" class="quiet" id="useLocalSettings">Use this device</button></div>
             <div class="field hidden" id="settingsDriveIdField" style="margin-top:12px;margin-bottom:0"><label for="settingsDriveClientId">Google OAuth Web client ID</label><input id="settingsDriveClientId" placeholder="...apps.googleusercontent.com"></div>
@@ -478,7 +478,20 @@
       let state = null, config = null, accessToken = null, driveClient = null, pendingDriveImport = false;
       let toastTimer, saveQueue = Promise.resolve(), page = "home", selectedExpenseCategory = "all";
       const $ = (id) => document.getElementById(id);
+      const isNativeApp = () => Boolean(window.Capacitor?.isNativePlatform?.());
       const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[char]);
+      let nativeBridgePromise;
+      function loadNativeBridge() {
+        if(!isNativeApp())return Promise.resolve(null);
+        if(window.ClumsyNativeBridge)return Promise.resolve(window.ClumsyNativeBridge);
+        if(!nativeBridgePromise)nativeBridgePromise=new Promise((resolve,reject)=>{
+          const script=document.createElement("script");script.src="native-bridge.js";
+          script.onload=()=>window.ClumsyNativeBridge?resolve(window.ClumsyNativeBridge):reject(new Error("Native file sharing is unavailable."));
+          script.onerror=()=>reject(new Error("Could not load Android file-sharing support."));
+          document.head.appendChild(script);
+        });
+        return nativeBridgePromise;
+      }
       const localDate = () => { const date = new Date(); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0,10); };
       const monthNow = () => localDate().slice(0,7);
       const money = (amount) => new Intl.NumberFormat("en-PK",{style:"currency",currency:state?.settings?.currency || "PKR",maximumFractionDigits:0}).format(Number(amount) || 0);
@@ -665,7 +678,7 @@
         if(/^\s*[=+\-@]/.test(text))text=`'${text}`;
         return `"${text.replace(/"/g,'""')}"`;
       }
-      function exportTransactionsCsv() {
+      async function exportTransactionsCsv() {
         const rows=filteredTransactions();
         if(!rows.length){showToast("There are no matching transactions to export.",true);return;}
         const header=["Date","Type","Description","Category","Account","From account","To account","Amount (PKR)","Note"];
@@ -673,11 +686,23 @@
           tx.date,TYPES[tx.type],tx.description,tx.category,account(tx.accountId)?.name,
           account(tx.fromAccountId)?.name,account(tx.toAccountId)?.name,Number(tx.amount),tx.note
         ])].map(row=>row.map(csvCell).join(","));
-        const blob=new Blob(["\uFEFF",lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
-        const url=URL.createObjectURL(blob),link=document.createElement("a");
-        link.href=url;link.download=`clumsy-transactions-${localDate()}.csv`;link.click();
-        setTimeout(()=>URL.revokeObjectURL(url),1000);
-        showToast(`${rows.length} transaction${rows.length===1?"":"s"} exported.`);
+        const content="\uFEFF"+lines.join("\r\n"),filename=`clumsy-transactions-${localDate()}.csv`;
+        try {
+          const nativeBridge=await loadNativeBridge();
+          if(nativeBridge) {
+            await nativeBridge.shareTextFile({filename,content});
+            showToast(`${rows.length} transaction${rows.length===1?"":"s"} ready to save or share.`);
+            return;
+          }
+          const blob=new Blob([content],{type:"text/csv;charset=utf-8"});
+          const url=URL.createObjectURL(blob),link=document.createElement("a");
+          link.href=url;link.download=filename;link.click();
+          setTimeout(()=>URL.revokeObjectURL(url),1000);
+          showToast(`${rows.length} transaction${rows.length===1?"":"s"} exported.`);
+        } catch(error) {
+          console.error("Could not export Clumsy transactions:",error);
+          showToast(error.message||"Could not export transactions.",true);
+        }
       }
       function budgetAlertFor(tx,previousMonthSpend,previousCategorySpend) {
         if(tx.type!=="expense"||tx.date?.slice(0,7)!==monthNow())return "";
@@ -765,10 +790,12 @@
         $("settingsBudgetProgress").classList.toggle("over",Boolean(limit&&spent>limit));
         $("settingsAccountCount").textContent=`${state.accounts.length} account${state.accounts.length===1?"":"s"}`;
         $("settingsDriveClientId").value=config?.mode==="drive"?config.clientId||"":"";
-        $("storageStatus").innerHTML=`<div class="storage-badge">${config?.mode==="drive"?"Google Drive backup":"This device only"}</div>`;
+        $("dataSyncDescription").textContent=isNativeApp()?"Your Android app stores data on this device":"Choose where your data lives";
+        $("storageStatus").innerHTML=`<div class="storage-badge">${isNativeApp()?"Android device storage":config?.mode==="drive"?"Google Drive backup":"This device only"}</div>`;
         $("connectDriveSettings").textContent=config?.mode==="drive"?"Reconnect Google Drive":"Connect Google Drive";
-        $("useLocalSettings").classList.toggle("hidden",config?.mode!=="drive");
-        $("settingsDriveIdField").classList.toggle("hidden",config?.mode==="drive");
+        $("connectDriveSettings").classList.toggle("hidden",isNativeApp());
+        $("useLocalSettings").classList.toggle("hidden",isNativeApp()||config?.mode!=="drive");
+        $("settingsDriveIdField").classList.toggle("hidden",isNativeApp()||config?.mode==="drive");
         $("footerStorage").textContent=config?.mode==="drive"?"Saved to Google Drive":"Saved on this device";
       }
       function render() {
@@ -922,9 +949,21 @@
       }
       async function exportBackup() {
         const content=JSON.stringify({app:"Clumsy",version:2,exportedAt:new Date().toISOString(),data:state},null,2);
-        const blob=new Blob([content],{type:"application/json"});
-        const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=`clumsy-backup-${localDate()}.json`;
-        link.click(); setTimeout(()=>URL.revokeObjectURL(link.href),1000); showToast("Backup downloaded.");
+        const filename=`clumsy-backup-${localDate()}.json`;
+        try {
+          const nativeBridge=await loadNativeBridge();
+          if(nativeBridge) {
+            await nativeBridge.shareTextFile({filename,content});
+            showToast("Backup ready to save or share.");
+            return;
+          }
+          const blob=new Blob([content],{type:"application/json"});
+          const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=filename;
+          link.click(); setTimeout(()=>URL.revokeObjectURL(link.href),1000); showToast("Backup downloaded.");
+        } catch(error) {
+          console.error("Could not export Clumsy backup:",error);
+          showToast(error.message||"Could not export backup.",true);
+        }
       }
       function loadGoogleIdentity() {
         if(window.google?.accounts?.oauth2) return Promise.resolve();
@@ -967,6 +1006,7 @@
           return {id:meta.id,data:freshState(name),isNew:true};
       }
       async function connectDrive(clientId,name,setup) {
+        if(isNativeApp())throw new Error("Google Drive sign-in is not supported inside the Android app yet. Use Settings to export a backup instead.");
         if(location.protocol==="file:") throw new Error("Google Drive sign-in cannot work from file://. Serve Clumsy on localhost or HTTPS, then connect.");
         if(!clientId.trim().endsWith(".apps.googleusercontent.com")) throw new Error("Enter a valid Google OAuth Web client ID.");
         const button=setup?$("driveConnectButton"):null;
@@ -984,6 +1024,11 @@
         } finally { if(button){button.disabled=false;button.textContent="Connect & save to Google Drive";} }
       }
       async function initialize() {
+        if(isNativeApp()) {
+          $("driveSetupChoice").classList.add("hidden");
+          $("importStorage").querySelector('option[value="drive"]').disabled=true;
+        }
+        void loadNativeBridge().catch(error=>{console.error("Could not load Android file-sharing support:",error);});
         let savedConfig=null;
         try { savedConfig=JSON.parse(localStorage.getItem(CONFIG_KEY)||"null"); } catch(error) { console.error("Invalid Clumsy storage settings:",error); }
         config=savedConfig;
@@ -1159,6 +1204,7 @@
       $("connectDriveSettings").addEventListener("click",async()=>{
         const clientId=$("settingsDriveClientId").value.trim()||config?.clientId||"";
         try {
+          if(isNativeApp())throw new Error("Google Drive sign-in is not supported inside the Android app yet. Use Settings to export a backup instead.");
           if(location.protocol==="file:")throw new Error("Google Drive sign-in needs Clumsy to run on localhost or HTTPS, not file://.");
           if(!clientId)throw new Error("Enter your Google OAuth Web client ID first.");
           const existing=state;
