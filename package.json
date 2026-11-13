@@ -5,6 +5,7 @@
   "description": "Clumsy personal finance app for Android, powered by Capacitor",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "test": "node --test",
     "android:add": "npm run build && cap add android",
     "android:sync": "npm run build && cap sync android",
     "android:open": "npm run android:sync && cap open android",

@@ -6,7 +6,7 @@ and bundles the Android file-sharing bridge.
 
 ## Requirements
 
-- Node.js 20 or newer and npm
+- Node.js 22 or newer and npm
 - Android Studio with the Android SDK and platform tools installed
 - A JDK supported by the installed Android Gradle Plugin (Android Studio's
   bundled JDK is recommended)
@@ -41,16 +41,44 @@ APK**).
 
 ## Data and backups
 
-Android stores local records in the app's private WebView storage. This storage
-is separate from browser data and is removed when the app is uninstalled.
-Export a Clumsy JSON backup from the browser app and restore it from the
-Android app's setup screen to move existing records. In Android, backup export
-opens the system share sheet so the file can be saved or sent somewhere safe.
-CSV export uses the same share sheet.
+Financial records are encrypted before they are stored on-device or included
+in JSON backups. On first launch, choose an encryption password of at least
+10 characters. Existing plain local records are encrypted when you set that
+password; legacy unencrypted JSON backups remain importable. New JSON backups
+are encrypted, and Clumsy cannot recover forgotten passwords. CSV exports are
+intended for spreadsheet use and are not encrypted.
 
-Google Drive sign-in is hidden in the Android app because Google's web OAuth
-sign-in is not supported inside embedded WebViews. Use local storage and
-regular backup exports in the APK.
+Google Drive backups are encrypted before upload and update automatically when
+you save app changes. If you are offline or authorization expires, the latest
+encrypted copy remains on-device and Clumsy retries after reconnection. After
+reinstalling, choose Google Drive during setup, authorize the app, and enter
+the password used for the backup to recover it. The device-only copy is still
+removed on uninstall.
+
+### People and money shared with others
+
+Add people under **More > People**, then choose them when recording money lent,
+money borrowed, repayments, or investments. Each person shows their outstanding
+balances and activity history. Investments are tracked separately from loans;
+add a transaction note to record the reason or terms. Existing debt history is
+kept and matched to people when the app is upgraded.
+
+### Configure Google Drive on Android
+
+1. Enable the Google Drive API in your Google Cloud project.
+2. Create an **Android OAuth client** for application ID
+   `com.clumsy.finance` and the SHA-1 signing-certificate fingerprint used to
+   sign your APK. Android obtains Drive authorization through Google's native
+   authorization API; no web client secret belongs in the app.
+3. If you also use the browser version, create a separate **Web OAuth client**
+   and enter its client ID in Settings.
+
+For a locally built debug APK, obtain its fingerprint with
+`cd android; .\gradlew.bat signingReport` in PowerShell. Google OAuth verifies
+both the package name and signing certificate. A debug APK downloaded from
+GitHub Actions may use a different debug certificate than your local build;
+register the fingerprint of the APK you install, or use a consistently signed
+build for ongoing Android Drive access.
 
 ## App identity
 

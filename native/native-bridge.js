@@ -1,7 +1,13 @@
+import { registerPlugin } from "@capacitor/core";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 
+const GoogleDriveAuth = registerPlugin("GoogleDriveAuth");
+
 window.ClumsyNativeBridge = {
+  async authorizeDrive() {
+    return GoogleDriveAuth.authorize();
+  },
   async shareTextFile({ filename, content }) {
     const { uri } = await Filesystem.writeFile({
       path: filename,
