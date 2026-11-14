@@ -1,6 +1,27 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { summarizeDebts } from "../native/debt.mjs";
+import { migrateDebtBalances, summarizeDebts } from "../native/debt.mjs";
+
+test("removes historical debt activity from wallet balances exactly once", () => {
+  const state = {
+    ledgerVersion: 0,
+    accounts: [{ id: "cash", balance: 580 }],
+    transactions: [
+      { type: "lent", accountId: "cash", amount: 100 },
+      { type: "borrowed", accountId: "cash", amount: 300 },
+      { type: "repayment", accountId: "cash", amount: 50 },
+      { type: "debt_payment", accountId: "cash", amount: 30 },
+      { type: "expense", accountId: "cash", amount: 40 },
+      { type: "investment", accountId: "cash", amount: 70 }
+    ]
+  };
+
+  assert.equal(migrateDebtBalances(state), true);
+  assert.equal(state.accounts[0].balance, 360);
+  assert.equal(state.ledgerVersion, 1);
+  assert.equal(migrateDebtBalances(state), false);
+  assert.equal(state.accounts[0].balance, 360);
+});
 
 test("calculates per-person lending, borrowing, repayments, and history", () => {
   const people = summarizeDebts([

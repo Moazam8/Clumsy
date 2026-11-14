@@ -20,9 +20,24 @@ var ClumsyDebt = (() => {
   // native/debt.mjs
   var debt_exports = {};
   __export(debt_exports, {
+    migrateDebtBalances: () => migrateDebtBalances,
     summarizeDebts: () => summarizeDebts
   });
   var PERSON_ACTIVITY_TYPES = /* @__PURE__ */ new Set(["lent", "borrowed", "repayment", "debt_payment", "investment"]);
+  var DEBT_BALANCE_TYPES = /* @__PURE__ */ new Set(["lent", "borrowed", "repayment", "debt_payment"]);
+  function migrateDebtBalances(state) {
+    if (state.ledgerVersion >= 1) return false;
+    const accounts = new Map(state.accounts.map((account) => [account.id, account]));
+    for (const transaction of state.transactions) {
+      if (!DEBT_BALANCE_TYPES.has(transaction.type)) continue;
+      const account = accounts.get(transaction.accountId);
+      if (!account) continue;
+      const amount = Number(transaction.amount) || 0;
+      account.balance += transaction.type === "lent" || transaction.type === "debt_payment" ? amount : -amount;
+    }
+    state.ledgerVersion = 1;
+    return true;
+  }
   function summarizeDebts(transactions) {
     const people = /* @__PURE__ */ new Map();
     for (const transaction of transactions) {

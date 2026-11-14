@@ -136,11 +136,13 @@
     :root[data-theme="dark"] .notice { background: #3a3423; color: #e7cf91; border-color: #605333; }
     .storage-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; background: var(--green-soft); color: var(--green); padding: 6px 10px; font-size: 11px; font-weight: 750; margin-bottom: 13px; }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(13,25,20,.52); display: grid; align-items: end; justify-items: center; padding: 0; z-index: 30; }
-    .modal { width: min(100%,520px); max-height: 90vh; max-height: 90dvh; overflow: auto; background: var(--paper); border-radius: 16px 16px 0 0; box-shadow: 0 24px 80px rgba(0,0,0,.24); padding-bottom: var(--safe-area-inset-bottom); }
-    .modal-head { padding: 19px 21px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+    .modal { width: min(100%,520px); max-height: 90vh; max-height: 90dvh; overflow: auto; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 20px 20px 0 0; box-shadow: 0 24px 80px rgba(0,0,0,.24); padding-bottom: var(--safe-area-inset-bottom); }
+    .modal-head { position: sticky; top: 0; z-index: 1; padding: 17px 20px 14px; background: var(--paper); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+    .modal-head:before { content: ""; position: absolute; top: 6px; left: 50%; width: 34px; height: 4px; transform: translateX(-50%); border-radius: 4px; background: var(--line); }
     .modal-head h2 { font-size: 17px; margin: 0; }
     .close-btn { border: 0; background: var(--canvas); color: var(--muted); border-radius: 8px; width: 30px; height: 30px; font-size: 17px; }
     .modal-form { padding: 18px 21px 21px; }
+    .modal-form > .hint { margin-top: 0; }
     .modal-form .field { margin-bottom: 13px; }
     .modal-form .field input, .modal-form .field select, .modal-form .field textarea { padding: 10px 11px; font-size: 16px; }
     .modal-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 17px; }
@@ -189,6 +191,22 @@
     .expense-day-total { color: var(--ink); font-size: 10px; }
     .expense-empty-action { display: inline-flex; margin-top: 12px; }
     .settings-sections { display: grid; grid-template-columns: 1fr; gap: 10px; align-items: start; }
+    .debt-quick-actions { display: flex; flex-wrap: wrap; gap: 7px; margin: 11px 0 2px; }
+    .debt-quick-actions button { min-height: 38px; padding: 8px 11px; font-size: 10px; }
+    .debt-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+    .debt-total { min-width: 0; padding: 11px; border-radius: 10px; background: var(--green-soft); }
+    .debt-total.owed { background: var(--red-soft); }
+    .debt-total span { display: block; color: var(--muted); font-size: 10px; }
+    .debt-total strong { display: block; margin-top: 4px; color: var(--ink); font-size: 13px; overflow-wrap: anywhere; }
+    .person-debt-card { margin-top: 8px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--paper); }
+    .person-debt-card summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+    .person-debt-card summary::-webkit-details-marker { display: none; }
+    .person-debt-card-name { min-width: 0; font-size: 12px; font-weight: 750; overflow-wrap: anywhere; }
+    .person-debt-balances { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 8px; color: var(--muted); font-size: 10px; text-align: right; }
+    .person-debt-details { padding-top: 8px; }
+    .person-debt-details .row-meta { padding-top: 6px; border-top: 1px solid var(--line); }
+    .person-card-actions { display: flex; flex: 0 0 auto; gap: 5px; }
+    .person-card-actions .quiet { min-height: 32px; padding: 6px 9px; font-size: 10px; }
     .settings-intro { margin: -7px 0 16px; color: var(--muted); font-size: 11px; line-height: 1.5; }
     .settings-group { min-width: 0; padding: 17px; }
     .settings-group-heading { display: flex; align-items: center; gap: 10px; margin: 0 0 15px; }
@@ -389,8 +407,13 @@
               <div class="section-heading" style="margin:0 0 8px"><h2>Savings goal</h2><button type="button" class="quiet" id="editGoalButton">Set goal</button></div>
               <div id="goalContent"></div>
             </article>
-            <article class="card content-card" style="margin-top:13px">
-              <div class="section-heading" style="margin:0 0 8px"><h2>Lending &amp; borrowing</h2><span class="subtle">Outstanding</span></div>
+            <article class="card content-card debt-dashboard" style="margin-top:13px">
+              <div class="section-heading" style="margin:0 0 8px"><div><h2>Money with people</h2><span class="subtle">Tracked separately from your wallet balance</span></div></div>
+              <div class="debt-quick-actions">
+                <button type="button" class="secondary" id="homeLendButton">＋ Lend money</button>
+                <button type="button" class="secondary" id="homeBorrowButton">＋ Borrow money</button>
+                <button type="button" class="quiet" id="homeAddPersonButton">＋ Add person</button>
+              </div>
               <div id="debtSummary"></div>
             </article>
           </div>
@@ -449,6 +472,11 @@
             <div class="setting-row"><div class="setting-row-copy"><strong>Appearance</strong></div><div class="setting-control"><select id="themeSelect" aria-label="Appearance"><option value="light">Light</option><option value="dark">Dark</option></select></div></div>
             <div class="setting-row"><div class="setting-row-copy"><strong>Currency</strong><small>Amounts are shown in Pakistani rupees</small></div><div class="setting-control"><span class="subtle">PKR · ₨</span></div></div>
             <button type="button" class="primary full" id="savePreferencesButton" style="margin-top:10px">Save changes</button>
+          </section>
+          <section class="card settings-group hidden" id="biometricSettingsSection">
+            <div class="settings-group-heading"><span class="settings-group-icon">⌑</span><div><h2>App unlock</h2><p>Open Clumsy with your fingerprint</p></div></div>
+            <div class="setting-row"><div class="setting-row-copy"><strong id="biometricStatus">Encryption password protected</strong><small id="biometricDescription">Fingerprint unlock keeps your records encrypted and avoids typing your password each time.</small></div></div>
+            <button type="button" class="secondary" id="biometricUnlockButton">Set up fingerprint unlock</button>
           </section>
           <section class="card settings-group">
             <div class="settings-group-heading"><span class="settings-group-icon">↗</span><div><h2>Budget</h2><p>Monthly spending target</p></div></div>
@@ -511,11 +539,13 @@
       const TYPES = { income:"Income", expense:"Expense", transfer:"Transfer", lent:"Money lent", borrowed:"Money borrowed", repayment:"Repayment received", debt_payment:"Debt payment", investment:"Investment" };
       const ICONS = { income:"↓", expense:"↑", transfer:"⇄", lent:"↗", borrowed:"↙", repayment:"↙", debt_payment:"↗", investment:"◇" };
       const PERSON_TYPES = new Set(["lent","borrowed","repayment","debt_payment","investment"]);
+      const DEBT_TYPES = new Set(["lent","borrowed","repayment","debt_payment"]);
       const CATEGORIES = ["Food","Transport","Bills","Shopping","Health","Other"];
       let state = null, config = null, accessToken = null, driveClient = null, pendingDriveImport = false;
+      let biometricAvailable=false, biometricUnlockEnabled=false;
       let encryptionKey = null, encryptionSalt = "", passwordDialogResolve = null, securityMode = "create";
       let pendingClumsyPayload = null, pendingClumsyLegacyState = null;
-      let toastTimer, saveQueue = Promise.resolve(), page = "home", selectedExpenseCategory = "all";
+      let toastTimer, saveQueue=Promise.resolve(), page="home", selectedExpenseCategory="all", debtBalanceMigrationPending=false;
       const $ = (id) => document.getElementById(id);
       const isNativeApp = () => Boolean(window.Capacitor?.isNativePlatform?.());
       const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[char]);
@@ -536,7 +566,7 @@
       const money = (amount) => new Intl.NumberFormat("en-PK",{style:"currency",currency:state?.settings?.currency || "PKR",maximumFractionDigits:0}).format(Number(amount) || 0);
       const dateLabel = (value) => { const d = new Date(`${value}T12:00:00`); return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-PK",{day:"numeric",month:"short",year:"numeric"}); };
       function freshState(name) {
-        return { version:2, name, accounts:[], people:[], transactions:[], notes:[], plans:[], budgets:{monthlyLimit:0,categories:{}}, goal:null,
+        return { version:2, ledgerVersion:1, name, accounts:[], people:[], transactions:[], notes:[], plans:[], budgets:{monthlyLimit:0,categories:{}}, goal:null,
           settings:{currency:"PKR",theme:"light"}, updatedAt:new Date().toISOString() };
       }
       const personKey = name => String(name||"").trim().toLocaleLowerCase();
@@ -550,6 +580,7 @@
         if (!input.name.trim()) throw new Error("The backup is missing a profile name.");
         const result = {
           ...freshState(input.name.trim()),
+          ledgerVersion:Number.isInteger(input.ledgerVersion)?input.ledgerVersion:0,
           accounts: input.accounts, transactions: input.transactions,
           notes: Array.isArray(input.notes) ? input.notes : [],
           plans: Array.isArray(input.plans) ? input.plans : [],
@@ -579,7 +610,7 @@
         }
         result.people=[...savedPeople.values()];
         for (const note of result.notes) {
-          if (!note || typeof note.id!=="string" || typeof note.title!=="string" || typeof note.body!=="string" || typeof note.date!=="string") throw new Error("The backup contains an invalid note.");
+          if (!note || typeof note.id!=="string" || typeof note.title!=="string" || typeof note.body!=="string" || (note.date!==undefined&&typeof note.date!=="string")) throw new Error("The backup contains an invalid note.");
         }
         for (const plan of result.plans) {
           if (!plan || typeof plan.id!=="string" || typeof plan.title!=="string" || typeof plan.date!=="string") throw new Error("The backup contains an invalid plan.");
@@ -589,6 +620,7 @@
           if(typeof category!=="string"||!Number.isFinite(Number(limit))||Number(limit)<0) throw new Error("The backup contains an invalid category budget.");
           result.budgets.categories[category]=Number(limit);
         }
+        debtBalanceMigrationPending=window.ClumsyDebt.migrateDebtBalances(result)||debtBalanceMigrationPending;
         return result;
       }
       function saveConfig() {
@@ -605,6 +637,7 @@
         try {
           snapshot=JSON.stringify(await encryptCurrentState());
           localStorage.setItem(DATA_KEY,snapshot);
+          debtBalanceMigrationPending=false;
           config={...config,encryption:{salt:encryptionSalt,kdf:"PBKDF2-SHA-256",iterations:310000,cipher:"AES-256-GCM"}};
           if(!saveConfig())throw new Error("Could not save encryption settings.");
         } catch(error) {
@@ -644,12 +677,13 @@
       function transactionRow(tx,compact=false) {
         const out=["expense","lent","debt_payment","investment"].includes(tx.type);
         const acc=account(tx.accountId), from=account(tx.fromAccountId), to=account(tx.toAccountId);
-        const details=tx.type==="transfer" ? `${from?.name||"Account"} → ${to?.name||"Account"}` : `${acc?.name||"Account"}${tx.category?` · ${tx.category}`:""}${tx.person?` · ${tx.person}`:""}`;
+        const details=tx.type==="transfer" ? `${from?.name||"Account"} → ${to?.name||"Account"}` : DEBT_TYPES.has(tx.type) ? tx.person||"Unassigned" : `${acc?.name||"Account"}${tx.category?` · ${tx.category}`:""}${tx.person?` · ${tx.person}`:""}`;
         const sign=out?"−":tx.type==="transfer"?"":"+";
+        const title=PERSON_TYPES.has(tx.type)?tx.person||"Unassigned":tx.description||TYPES[tx.type];
         return `<div class="transaction-row"><div class="row-icon">${ICONS[tx.type]||"•"}</div><div>
-          <div class="row-title">${esc(tx.description||TYPES[tx.type])}</div>
+          <div class="row-title">${esc(title)}</div>
           <div class="row-meta">${esc(TYPES[tx.type])} · ${esc(details)} · ${dateLabel(tx.date)}</div>
-          ${tx.note?`<div class="row-note">${esc(tx.note)}</div>`:""}
+          ${tx.note&&!compact?`<div class="row-note">${esc(tx.note)}</div>`:""}
           ${compact?"":`<div class="row-actions"><button type="button" data-delete-tx="${esc(tx.id)}">Delete</button></div>`}
           </div><div class="row-amount ${out?"out":tx.type==="transfer"?"":"in"}">${sign}${money(tx.amount)}</div></div>`;
       }
@@ -797,23 +831,27 @@
           <div class="progress"><i style="width:${percent}%"></i></div>`;
       }
       function renderDebts() {
-        const people=window.ClumsyDebt.summarizeDebts(state.transactions);
+        const activity=window.ClumsyDebt.summarizeDebts(state.transactions),byName=new Map(activity.map(person=>[person.key,person]));
+        const names=new Map(state.people.map(person=>[personKey(person.name),person.name]));
+        for(const person of activity)if(person.name!=="Unassigned"&&!names.has(person.key))names.set(person.key,person.name);
+        const people=[...names].map(([key,name])=>byName.get(key)||{key,name,lent:0,repayments:0,borrowed:0,debtPayments:0,invested:0,owedToYou:0,youOwe:0,history:[]});
+        for(const person of activity)if(person.name==="Unassigned")people.push(person);
         const owed=people.reduce((sum,person)=>sum+person.owedToYou,0);
         const due=people.reduce((sum,person)=>sum+person.youOwe,0);
-        const rows=people.map(person=>`<details class="budget-row">
-          <summary class="budget-top"><strong>${esc(person.name)}</strong><span>Owed ${money(person.owedToYou)} · You owe ${money(person.youOwe)}</span></summary>
-          <div class="row-meta">Lent ${money(person.lent)} · Repaid ${money(person.repayments)} · Borrowed ${money(person.borrowed)} · Paid back ${money(person.debtPayments)} · Invested ${money(person.invested)}</div>
-          ${person.history.map(tx=>`<div class="row-meta">${dateLabel(tx.date)} · ${esc(TYPES[tx.type])} · ${money(tx.amount)}${tx.note?` · ${esc(tx.note)}`:""}</div>`).join("")}
+        const rows=people.map(person=>`<details class="person-debt-card">
+          <summary><span class="person-debt-card-name">${esc(person.name)}</span><span class="person-debt-balances"><span>Owed ${money(person.owedToYou)}</span><span>You owe ${money(person.youOwe)}</span>${person.invested?`<span>Invested ${money(person.invested)}</span>`:""}</span></summary>
+          <div class="person-debt-details"><div class="row-meta">Lent ${money(person.lent)} · Repaid ${money(person.repayments)} · Borrowed ${money(person.borrowed)} · Paid back ${money(person.debtPayments)}${person.invested?` · Invested ${money(person.invested)}`:""}</div>
+          ${person.history.map(tx=>`<div class="row-meta">${esc(TYPES[tx.type])} · ${money(tx.amount)}${tx.note?` · ${esc(tx.note)}`:""}</div>`).join("")}
+          <div class="debt-quick-actions"><button type="button" class="quiet" data-person-lend="${esc(person.key)}">＋ Lend</button><button type="button" class="quiet" data-person-borrow="${esc(person.key)}">＋ Borrow</button></div></div>
         </details>`).join("");
-        $("debtSummary").innerHTML=`<div class="budget-row" style="display:flex;justify-content:space-between"><span class="subtle">Owed to you</span><strong style="font-size:12px">${money(owed)}</strong></div>
-          <div class="budget-row" style="display:flex;justify-content:space-between"><span class="subtle">You owe</span><strong style="font-size:12px">${money(due)}</strong></div>${rows}`;
+        $("debtSummary").innerHTML=`<div class="debt-totals"><div class="debt-total"><span>Owed to you</span><strong>${money(owed)}</strong></div><div class="debt-total owed"><span>You owe</span><strong>${money(due)}</strong></div></div>${rows||`<div class="empty-state" style="padding:15px 6px"><strong>No money tracked with people</strong>Lent and borrowed amounts stay separate from account balances.</div>`}`;
       }
       function renderPeopleSettings() {
         const activity=new Map(window.ClumsyDebt.summarizeDebts(state.transactions).map(person=>[person.key,person]));
         $("settingsPeopleList").innerHTML=state.people.length?state.people.map(person=>{
           const summary=activity.get(personKey(person.name));
           const balances=summary?`<span>Owed to you ${money(summary.owedToYou)}</span><span>You owe ${money(summary.youOwe)}</span><span>Invested ${money(summary.invested)}</span>`:"<span>No activity yet</span>";
-          return `<article class="person-card"><div class="person-card-head"><div class="person-card-name">${esc(person.name)}</div><div class="person-card-actions"><button type="button" class="quiet" data-record-person="${esc(person.id)}">＋ Record</button><button type="button" class="quiet" data-edit-person="${esc(person.id)}">Edit</button><button type="button" class="quiet" data-delete-person="${esc(person.id)}" aria-label="Delete ${esc(person.name)}">Delete</button></div></div><div class="person-card-balances">${balances}</div>${person.note?`<div class="person-card-note">${esc(person.note)}</div>`:""}</article>`;
+          return `<article class="person-card"><div class="person-card-head"><div class="person-card-name">${esc(person.name)}</div><div class="person-card-actions"><button type="button" class="secondary" data-edit-person="${esc(person.id)}">Edit</button></div></div><div class="person-card-balances">${balances}</div>${person.note?`<div class="person-card-note">${esc(person.note)}</div>`:""}</article>`;
         }).join(""):`<div class="empty-state" style="padding:16px 8px"><strong>No people added</strong>Add someone to quickly record money lent, borrowed or invested.</div>`;
       }
       function renderCategoryBudgets() {
@@ -826,7 +864,7 @@
       }
       function renderNotes() {
         const notes=[...state.notes].sort((a,b)=>(b.updatedAt||"").localeCompare(a.updatedAt||""));
-        $("notesList").innerHTML=notes.length?notes.map(note=>`<article class="card note-card"><div class="note-head"><div><div class="row-title">${esc(note.title)}</div><div class="row-meta">${dateLabel(note.date||localDate())}</div></div><div class="row-actions"><button type="button" data-edit-note="${esc(note.id)}">Edit</button><button type="button" data-delete-note="${esc(note.id)}">Delete</button></div></div><div class="row-note">${esc(note.body)}</div></article>`).join(""):`<div class="card empty-state"><strong>No notes yet</strong>Save reminders or details you want to keep. Your expense notes appear with each transaction.</div>`;
+        $("notesList").innerHTML=notes.length?notes.map(note=>`<article class="card note-card"><div class="note-head"><div><div class="row-title">${esc(note.title)}</div></div><div class="row-actions"><button type="button" data-edit-note="${esc(note.id)}">Edit</button><button type="button" data-delete-note="${esc(note.id)}">Delete</button></div></div><div class="row-note">${esc(note.body)}</div></article>`).join(""):`<div class="card empty-state"><strong>No notes yet</strong>Save reminders or details you want to keep. Your expense notes appear with each transaction.</div>`;
       }
       function renderPlans() {
         const plans=[...state.plans].sort((a,b)=>a.date.localeCompare(b.date)||(a.time||"").localeCompare(b.time||""));
@@ -848,6 +886,13 @@
         $("settingsBudgetProgress").classList.toggle("over",Boolean(limit&&spent>limit));
         $("settingsAccountCount").textContent=`${state.accounts.length} account${state.accounts.length===1?"":"s"}`;
         renderPeopleSettings();
+        $("biometricSettingsSection").classList.toggle("hidden",!isNativeApp());
+        $("biometricStatus").textContent=biometricUnlockEnabled?"Fingerprint unlock is on":"Encryption password protected";
+        $("biometricDescription").textContent=biometricAvailable
+          ?"Your records stay encrypted. Use your fingerprint instead of typing your password each time."
+          :"Fingerprint unlock is not available on this device. Your encryption password still works.";
+        $("biometricUnlockButton").textContent=biometricUnlockEnabled?"Turn off fingerprint unlock":"Set up fingerprint unlock";
+        $("biometricUnlockButton").disabled=!biometricAvailable;
         $("settingsDriveClientId").value=config?.mode==="drive"?config.clientId||"":"";
         $("dataSyncDescription").textContent=config?.mode==="drive"?"Encrypted changes sync to Google Drive automatically":"Your records are encrypted on this device";
         $("storageStatus").innerHTML=`<div class="storage-badge">${config?.mode==="drive"?"Encrypted Google Drive backup":"Encrypted device storage"}</div>`;
@@ -910,13 +955,13 @@
         $("modalBackdrop").classList.add("hidden"); $("modalContent").innerHTML="";
         if(resolvePassword)resolvePassword(null);
       }
-      function requestPassword(title,description) {
+      function requestPassword(title,description,buttonLabel="Unlock backup") {
         return new Promise(resolve=>{
           passwordDialogResolve=resolve;
           openModal(title,`<form class="modal-form">
             <p class="row-meta">${esc(description)}</p>
             <div class="field"><label for="backupPassword">Encryption password</label><input id="backupPassword" name="password" type="password" autocomplete="current-password" required></div>
-            <div class="modal-actions"><button type="button" class="quiet" data-cancel>Cancel</button><button type="submit" class="primary">Unlock backup</button></div>
+            <div class="modal-actions"><button type="button" class="quiet" data-cancel>Cancel</button><button type="submit" class="primary">${esc(buttonLabel)}</button></div>
           </form>`,data=>{
             const password=String(data.get("password")||"");
             if(!password){showToast("Enter the encryption password.",true);return;}
@@ -926,6 +971,60 @@
             finish(password);
           });
         });
+      }
+      async function enableBiometricUnlock(password) {
+        const nativeBridge=await loadNativeBridge();
+        if(!nativeBridge||!biometricAvailable)throw new Error("Fingerprint unlock is not available on this device.");
+        await nativeBridge.saveBiometricPassword(password);
+        biometricUnlockEnabled=true;
+        if(state)renderSettings();
+      }
+      async function manageBiometricUnlock() {
+        try {
+          const nativeBridge=await loadNativeBridge();
+          if(!nativeBridge||!biometricAvailable)throw new Error("Fingerprint unlock is not available on this device.");
+          if(biometricUnlockEnabled) {
+            if(!confirm("Turn off fingerprint unlock? Your encrypted records will still require your encryption password."))return;
+            await nativeBridge.clearBiometricPassword();
+            biometricUnlockEnabled=false;
+            renderSettings();
+            showToast("Fingerprint unlock turned off. Your records remain encrypted.");
+            return;
+          }
+          const password=await requestPassword("Set up fingerprint unlock","Verify your current Clumsy password once. Android will protect it with your fingerprint.", "Verify password");
+          if(!password)return;
+          const payload=JSON.parse(localStorage.getItem(DATA_KEY)||"null");
+          const salt=payload?.salt||config?.encryption?.salt;
+          if(!salt)throw new Error("Encryption details are missing. Unlock your Clumsy data with your password first.");
+          if(!payload||!window.ClumsySecurity.isEncrypted(payload))throw new Error("Could not verify the current encryption password from saved encrypted data.");
+          const derived=await window.ClumsySecurity.deriveKey(password,salt);
+          try { await window.ClumsySecurity.decrypt(payload,derived.key); }
+          catch { throw new Error("That password did not unlock your Clumsy data."); }
+          await enableBiometricUnlock(password);
+          showToast("Fingerprint unlock is ready.");
+        } catch(error) {
+          console.error("Could not update fingerprint unlock:",error);
+          showToast(error.message||"Could not update fingerprint unlock.",true);
+        }
+      }
+      async function unlockWithBiometrics(payload) {
+        if(!isNativeApp()||!biometricUnlockEnabled)return false;
+        try {
+          const nativeBridge=await loadNativeBridge();
+          const result=await nativeBridge.unlockWithBiometrics();
+          const salt=payload?.salt||config?.encryption?.salt;
+          if(!salt)throw new Error("Encryption details are missing.");
+          const derived=await window.ClumsySecurity.deriveKey(result.password,salt);
+          encryptionKey=derived.key;encryptionSalt=derived.salt;
+          if(payload)state=validateState(await window.ClumsySecurity.decrypt(payload,encryptionKey));
+          config={...config,mode:config?.mode||"local",encryption:{salt:encryptionSalt,kdf:"PBKDF2-SHA-256",iterations:310000,cipher:"AES-256-GCM"}};
+          if(!saveConfig())throw new Error("Could not save encryption settings.");
+          await continueAfterSecurity();
+          return true;
+        } catch(error) {
+          console.warn("Fingerprint unlock did not complete; falling back to the encryption password.",error);
+          return false;
+        }
       }
       async function decodePayload(payload) {
         if(!window.ClumsySecurity)throw new Error("Clumsy encryption support did not load. Rebuild the app and try again.");
@@ -968,11 +1067,12 @@
       }
       function openPersonModal(id="") {
         const person=state.people.find(item=>item.id===id);
+        const hasHistory=person&&state.transactions.some(tx=>PERSON_TYPES.has(tx.type)&&personKey(tx.person)===personKey(person.name));
         openModal(person?"Edit person":"Add a person",`<form class="modal-form">
           <div class="field"><label for="personName">Name</label><input id="personName" name="name" maxlength="60" value="${esc(person?.name||"")}" placeholder="Person's name" required></div>
           <div class="field"><label for="personNote">Private note (optional)</label><textarea id="personNote" name="note" maxlength="300" placeholder="Useful details to remember about this person…">${esc(person?.note||"")}</textarea></div>
           <div class="hint">Notes are encrypted with your Clumsy records. Add the reason for each loan or investment when recording its transaction.</div>
-          <div class="modal-actions"><button type="button" class="quiet" data-cancel>Cancel</button><button type="submit" class="primary">${person?"Save changes":"Add person"}</button></div></form>`,async data=>{
+          <div class="modal-actions">${person&&!hasHistory?`<button type="button" class="danger-btn" data-remove-person="${esc(person.id)}">Delete person</button>`:""}<button type="button" class="quiet" data-cancel>Cancel</button><button type="submit" class="primary">${person?"Save changes":"Add person"}</button></div></form>`,async data=>{
             const name=String(data.get("name")||"").trim(),note=String(data.get("note")||"").trim();
             if(!name){showToast("Enter the person's name.",true);return;}
             if(state.people.some(item=>item.id!==person?.id&&personKey(item.name)===personKey(name))){showToast("This person is already in your list.",true);return;}
@@ -984,7 +1084,8 @@
           });
       }
       function openTransactionModal(initialType="expense",selectedPersonId="") {
-        if(!state.accounts.length){showToast("Add your own account and current balance before recording transactions.");openAccountModal();return;}
+        const initialDebt=DEBT_TYPES.has(initialType);
+        if(!state.accounts.length&&!initialDebt){showToast("Add your own account and current balance before recording transactions.");openAccountModal();return;}
         const today=localDate();
         openModal("Add a transaction",`<form class="modal-form">
           <div class="field"><label for="txType">Transaction type</label><select id="txType" name="type">${Object.entries(TYPES).map(([v,l])=>`<option value="${v}" ${v===initialType?"selected":""}>${l}</option>`).join("")}</select></div>
@@ -1002,12 +1103,12 @@
           <div class="modal-actions"><button type="button" class="quiet" data-cancel>Cancel</button><button type="submit" class="primary">Save transaction</button></div></form>`,saveTransaction);
         const sync=()=>{
           const type=$("txType").value,transfer=type==="transfer";
-          const debt=PERSON_TYPES.has(type),newPerson=debt&&$("txPerson").value==="__new__";
-          $("debtPersonWrap").classList.toggle("hidden",!debt);$("txPerson").required=debt;
+          const debt=DEBT_TYPES.has(type),hasPerson=PERSON_TYPES.has(type),newPerson=hasPerson&&$("txPerson").value==="__new__";
+          $("debtPersonWrap").classList.toggle("hidden",!hasPerson);$("txPerson").required=hasPerson;
           $("newPersonWrap").classList.toggle("hidden",!newPerson);$("newPersonName").required=newPerson;
-          $("txNoteLabel").textContent=type==="investment"?"Investment reason / details (optional)":debt?"Note / reason (optional)":type==="expense"?"Notes — where and why did you spend it?":"Note / details (optional)";
+          $("txNoteLabel").textContent=type==="investment"?"Investment reason / details (optional)":hasPerson?"Note / reason (optional)":type==="expense"?"Notes — where and why did you spend it?":"Note / details (optional)";
           $("fromWrap").classList.toggle("hidden",!transfer); $("toWrap").classList.toggle("hidden",!transfer);
-          $("accountWrap").classList.toggle("hidden",transfer); $("categoryWrap").classList.toggle("hidden",type!=="expense");
+          $("accountWrap").classList.toggle("hidden",transfer||debt); $("categoryWrap").classList.toggle("hidden",type!=="expense");
           if(type==="expense") $("customCategoryWrap").classList.toggle("hidden",$("txCategory").value!=="custom");
           else $("customCategoryWrap").classList.add("hidden");
         };
@@ -1020,8 +1121,8 @@
         const selectedPerson=state.people.find(item=>item.id===personId);
         const enteredPerson=personId==="__new__"?String(data.get("newPersonName")||"").trim():"";
         const person=selectedPerson?.name||enteredPerson;
-        const debt=PERSON_TYPES.has(type);
-        if(debt&&!person){showToast("Enter the person's name for this debt transaction.",true);return;}
+        const debt=DEBT_TYPES.has(type),hasPerson=PERSON_TYPES.has(type);
+        if(hasPerson&&!person){showToast("Choose or add the person for this transaction.",true);return;}
         if(type==="repayment"||type==="debt_payment") {
           const key=person.toLocaleLowerCase();
           const balance=state.transactions.filter(tx=>(tx.person||"").trim().toLocaleLowerCase()===key)
@@ -1030,21 +1131,21 @@
         }
         const transfer=type==="transfer", acc=account(String(data.get("accountId"))),from=account(String(data.get("fromAccountId"))),to=account(String(data.get("toAccountId")));
         if(transfer&&(!from||!to||from.id===to.id)){showToast("Choose two different accounts for the transfer.",true);return;}
-        if(!transfer&&!acc){showToast("Choose an account.",true);return;}
-        const out=["expense","lent","debt_payment","investment"].includes(type);
-        if((transfer&&Number(from.balance)<amount)||(out&&Number(acc.balance)<amount)){showToast("The amount is greater than the selected account balance.",true);return;}
+        if(!transfer&&!debt&&!acc){showToast("Choose an account.",true);return;}
+        const out=["expense","investment"].includes(type);
+        if((transfer&&Number(from.balance)<amount)||(out&&(!acc||Number(acc.balance)<amount))){showToast("The amount is greater than the selected account balance.",true);return;}
         let category=type==="expense"?String(data.get("category")||"Other"):"";
         if(category==="custom"){category=String(data.get("customCategory")||"").trim();if(!category){showToast("Enter a category name.",true);return;}}
         const currentExpense=type==="expense"&&date.slice(0,7)===monthNow();
         const previousMonthSpend=currentExpense?spentThisMonth():0;
         const previousCategorySpend=currentExpense?currentMonthTransactions().filter(tx=>tx.type==="expense"&&tx.category===category).reduce((sum,tx)=>sum+Number(tx.amount),0):0;
         const tx={id:crypto.randomUUID(),type,amount,date,description:String(data.get("description")||"").trim()||TYPES[type],note:String(data.get("note")||"").trim(),category,createdAt:Date.now()};
-        if(debt) {
+        if(hasPerson) {
           tx.person=person;
           if(!selectedPerson&&!state.people.some(item=>personKey(item.name)===personKey(person)))state.people.push({id:crypto.randomUUID(),name:person,note:""});
         }
         if(transfer){tx.fromAccountId=from.id;tx.toAccountId=to.id;from.balance-=amount;to.balance+=amount;}
-        else {tx.accountId=acc.id;acc.balance+=["income","borrowed","repayment"].includes(type)?amount:-amount;}
+        else if(!debt) {tx.accountId=acc.id;acc.balance+=type==="income"?amount:-amount;}
         const budgetAlert=budgetAlertFor(tx,previousMonthSpend,previousCategorySpend);
         state.transactions.push(tx); const saved=await persist(); closeModal(); render();
         if(saved)showToast(budgetAlert||"Transaction saved.",Boolean(budgetAlert));
@@ -1080,15 +1181,14 @@
           });
       }
       function openNoteModal(id="") {
-        const note=state.notes.find(n=>n.id===id), today=localDate();
+        const note=state.notes.find(n=>n.id===id);
         openModal(note?"Edit note":"New note",`<form class="modal-form"><div class="field"><label for="noteTitle">Title</label><input id="noteTitle" name="title" maxlength="80" value="${esc(note?.title||"")}" placeholder="What do you want to remember?" required></div>
           <div class="field"><label for="noteBody">Note</label><textarea id="noteBody" name="body" maxlength="2000" placeholder="Write your note…" required>${esc(note?.body||"")}</textarea></div>
-          <div class="field"><label for="noteDate">Date</label><input id="noteDate" name="date" type="date" value="${esc(note?.date||today)}" required></div>
           <div class="modal-actions"><button type="button" class="quiet" data-cancel>Cancel</button><button type="submit" class="primary">Save note</button></div></form>`,async data=>{
             const title=String(data.get("title")||"").trim(),body=String(data.get("body")||"").trim();
             if(!title||!body){showToast("Add a title and note.",true);return;}
-            if(note) Object.assign(note,{title,body,date:String(data.get("date")),updatedAt:new Date().toISOString()});
-            else state.notes.push({id:crypto.randomUUID(),title,body,date:String(data.get("date")),updatedAt:new Date().toISOString()});
+            if(note) Object.assign(note,{title,body,updatedAt:new Date().toISOString()});
+            else state.notes.push({id:crypto.randomUUID(),title,body,updatedAt:new Date().toISOString()});
             const saved=await persist();closeModal();render();if(saved)showToast(note?"Note updated.":"Note saved.");
           });
       }
@@ -1233,6 +1333,7 @@
         }
       }
       async function continueAfterSecurity() {
+        if(state&&debtBalanceMigrationPending)await persist();
         if(config?.mode==="drive") {
           let cached=state;
           const text=localStorage.getItem(DATA_KEY);
@@ -1275,7 +1376,18 @@
           $("settingsDriveIdField").classList.add("hidden");
           $("driveSettingsNotice").textContent="Android uses native Google authorization. Register this app’s package name and signing certificate SHA-1 in Google Cloud, and enable the Drive API.";
         }
-        void loadNativeBridge().catch(error=>{console.error("Could not load Android file-sharing support:",error);});
+        let nativeBridge=null;
+        if(isNativeApp()) {
+          try {
+            nativeBridge=await loadNativeBridge();
+            biometricAvailable=await nativeBridge.biometricUnlockAvailable();
+            biometricUnlockEnabled=await nativeBridge.hasBiometricUnlock();
+          } catch(error) {
+            console.error("Could not load Android device unlock support:",error);
+          }
+        } else {
+          void loadNativeBridge().catch(error=>{console.error("Could not load Android file-sharing support:",error);});
+        }
         if(!window.ClumsySecurity)throw new Error("Clumsy encryption support did not load. Run npm run build and reopen the app.");
         try { config=JSON.parse(localStorage.getItem(CONFIG_KEY)||"null"); }
         catch(error) { console.error("Invalid Clumsy storage settings:",error); config=null; }
@@ -1287,6 +1399,7 @@
           if(window.ClumsySecurity.isEncrypted(payload)) {
             config={...config,encryption:{...config?.encryption,salt:payload.salt}};
             pendingClumsyPayload=payload;
+            if(biometricUnlockEnabled&&await unlockWithBiometrics(payload))return;
             showSecurityGate("unlock");
             return;
           }
@@ -1295,6 +1408,7 @@
           return;
         }
         if(config?.encryption?.salt) {
+          if(biometricUnlockEnabled&&await unlockWithBiometrics(null))return;
           showSecurityGate("unlock");
           return;
         }
@@ -1303,6 +1417,7 @@
       document.querySelectorAll("[data-setup-choice]").forEach(button=>button.addEventListener("click",()=>showSetup(button.dataset.setupChoice)));
       $("securityForm").addEventListener("submit",async event=>{
         event.preventDefault();
+        const offerBiometric=securityMode!=="unlock"&&isNativeApp()&&biometricAvailable&&!biometricUnlockEnabled;
         const password=$("securityPassword").value;
         try {
           if(securityMode!=="unlock"&&password.length<10)throw new Error("Choose a password with at least 10 characters.");
@@ -1334,6 +1449,10 @@
           pendingClumsyPayload=null;pendingClumsyLegacyState=null;
           $("securityPassword").value="";$("securityPasswordConfirm").value="";
           await continueAfterSecurity();
+          if(offerBiometric&&confirm("Set up fingerprint unlock so you can open Clumsy without typing your encryption password each time? Your financial data will stay encrypted.")) {
+            try { await enableBiometricUnlock(password);showToast("Fingerprint unlock is ready."); }
+            catch(error) { console.error("Could not enable fingerprint unlock:",error);showToast("Fingerprint unlock was not enabled. You can try again in Settings.",true); }
+          }
         } catch(error) {
           console.error("Could not unlock or encrypt Clumsy data:",error);
           showToast(securityMode==="unlock"?"The password did not unlock this data. Check it and try again.":error.message||"Could not encrypt data.",true);
@@ -1441,16 +1560,19 @@
         const deleteTx=event.target.closest("[data-delete-tx]"), deleteNote=event.target.closest("[data-delete-note]");
         const editNote=event.target.closest("[data-edit-note]"), editPlan=event.target.closest("[data-edit-plan]");
         const deletePlan=event.target.closest("[data-delete-plan]"), cancel=event.target.closest("[data-cancel]");
-        const recordPerson=event.target.closest("[data-record-person]"), editPerson=event.target.closest("[data-edit-person]"), deletePersonButton=event.target.closest("[data-delete-person]");
+        const editPerson=event.target.closest("[data-edit-person]");
+        const lendToPerson=event.target.closest("[data-person-lend]"), borrowFromPerson=event.target.closest("[data-person-borrow]");
         if(go)navigate(go.dataset.go);
         if(accountButton)openAccountModal();
-        if(recordPerson)openTransactionModal("lent",recordPerson.dataset.recordPerson);
         if(editPerson)openPersonModal(editPerson.dataset.editPerson);
-        if(deletePersonButton) {
-          const person=state.people.find(item=>item.id===deletePersonButton.dataset.deletePerson);
-          if(person&&state.transactions.some(tx=>PERSON_TYPES.has(tx.type)&&personKey(tx.person)===personKey(person.name)))showToast("This person has transaction history. Edit the person instead so their records stay connected.",true);
-          else if(person&&confirm(`Delete ${person.name} from your people list?`))updateData(()=>{state.people=state.people.filter(item=>item.id!==person.id);},"Person deleted.");
+        if(lendToPerson||borrowFromPerson) {
+          const key=(lendToPerson||borrowFromPerson).dataset.personLend||(lendToPerson||borrowFromPerson).dataset.personBorrow;
+          const person=state.people.find(item=>personKey(item.name)===key);
+          openTransactionModal(lendToPerson?"lent":"borrowed",person?.id||"");
         }
+        if(event.target.id==="homeLendButton")openTransactionModal("lent");
+        if(event.target.id==="homeBorrowButton")openTransactionModal("borrowed");
+        if(event.target.id==="homeAddPersonButton")openPersonModal();
         if(event.target.closest("[data-add-expense]"))openTransactionModal("expense");
         if(cancel)closeModal();
         if(deleteTx) deleteTransaction(deleteTx.dataset.deleteTx);
@@ -1467,24 +1589,35 @@
       });
       async function deleteTransaction(id) {
         const tx=state.transactions.find(item=>item.id===id); if(!tx)return;
-        if(!confirm("Delete this transaction and reverse its effect on your account balances?"))return;
+        if(!confirm(DEBT_TYPES.has(tx.type)?"Delete this person transaction?":"Delete this transaction and reverse its effect on your account balances?"))return;
         if(tx.type==="transfer") {
           const from=account(tx.fromAccountId),to=account(tx.toAccountId);
           if(from)from.balance+=Number(tx.amount); if(to)to.balance-=Number(tx.amount);
         } else {
           const acc=account(tx.accountId);
-          if(acc)acc.balance+=["expense","lent","debt_payment","investment"].includes(tx.type)?Number(tx.amount):-Number(tx.amount);
+          if(acc&&tx.type==="income")acc.balance-=Number(tx.amount);
+          else if(acc&&!DEBT_TYPES.has(tx.type))acc.balance+=Number(tx.amount);
         }
         state.transactions=state.transactions.filter(item=>item.id!==id); const saved=await persist();render();if(saved)showToast("Transaction deleted and balance updated.");
       }
       $("closeModal").addEventListener("click",closeModal);
       $("modalBackdrop").addEventListener("click",event=>{if(event.target===$("modalBackdrop"))closeModal();});
-      $("modalContent").addEventListener("click",event=>{if(event.target.closest("[data-cancel]"))closeModal();});
+      $("modalContent").addEventListener("click",event=>{
+        if(event.target.closest("[data-cancel]"))closeModal();
+        const remove=event.target.closest("[data-remove-person]");
+        if(remove) {
+          const person=state.people.find(item=>item.id===remove.dataset.removePerson);
+          if(!person)return;
+          if(state.transactions.some(tx=>PERSON_TYPES.has(tx.type)&&personKey(tx.person)===personKey(person.name))){showToast("This person has transaction history and cannot be deleted.",true);return;}
+          if(confirm(`Delete ${person.name} from your people list?`))updateData(()=>{state.people=state.people.filter(item=>item.id!==person.id);closeModal();},"Person deleted.");
+        }
+      });
       document.addEventListener("keydown",event=>{if(event.key==="Escape")closeModal();});
       $("savePreferencesButton").addEventListener("click",async()=>{
         const name=$("settingsName").value.trim();if(!name){showToast("Enter a name.",true);return;}
         state.name=name;state.settings.theme=$("themeSelect").value;const saved=await persist();render();if(saved)showToast("Preferences saved.");
       });
+      $("biometricUnlockButton").addEventListener("click",()=>void manageBiometricUnlock());
       $("saveLimitButton").addEventListener("click",async()=>{
         const amount=Number($("settingsLimit").value||0);if(!Number.isFinite(amount)||amount<0){showToast("Enter a valid non-negative limit.",true);return;}
         state.budgets.monthlyLimit=amount;const saved=await persist();render();if(saved)showToast(amount?"Monthly limit saved.":"Monthly limit removed.");

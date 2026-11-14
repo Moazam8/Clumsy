@@ -1,4 +1,19 @@
 const PERSON_ACTIVITY_TYPES = new Set(["lent", "borrowed", "repayment", "debt_payment", "investment"]);
+const DEBT_BALANCE_TYPES = new Set(["lent", "borrowed", "repayment", "debt_payment"]);
+
+export function migrateDebtBalances(state) {
+  if (state.ledgerVersion >= 1) return false;
+  const accounts = new Map(state.accounts.map(account => [account.id, account]));
+  for (const transaction of state.transactions) {
+    if (!DEBT_BALANCE_TYPES.has(transaction.type)) continue;
+    const account = accounts.get(transaction.accountId);
+    if (!account) continue;
+    const amount = Number(transaction.amount) || 0;
+    account.balance += transaction.type === "lent" || transaction.type === "debt_payment" ? amount : -amount;
+  }
+  state.ledgerVersion = 1;
+  return true;
+}
 
 export function summarizeDebts(transactions) {
   const people = new Map();
